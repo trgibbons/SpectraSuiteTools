@@ -3,16 +3,39 @@
 # Written by Ted Gibbons (tgibbons@umd.edu)
 # Winter 2012
 
+# These are all standard libraries in Python3, and later version of Python2
 import sys
 import os
 import re
+import argparse
 
+
+
+
+
+# Create a helpful little menu for the user
+def get_parsed_args():
+
+  # Initialize the argument parser
+  parser = argparse.ArgumentParser(description='Combine a set of output files from the '+ \
+                                   'SpectraSuite platform into a single tab-delimited file that '+ \
+                                   'can be easily imported into a spreadsheet program')
+
+  # Get the working directory from the user (mandatory)
+  parser.add_argument('dir', action='store', \
+                      help='A directory containing a set of SpectraSuite output files')
+
+  # Get the output filename from the user (optional)
+  parser.add_argument('-o', '--out', action='store', default="combinatized.txt", \
+                      help='A name for the combined output file (def="combinatized.txt")')
+
+  return parser.parse_args()
 
 
 
 
 # This function initializes the table with row names from the first file
-def initializeTable(directory, filename):
+def initialize_table(directory, filename):
 
   # This "table" variable is different than the one I created within main(), and will soon replace it
   table = [["Filename", filename]]
@@ -56,7 +79,7 @@ def initializeTable(directory, filename):
 
 
 # This function adds new data to the table, and attempts to check for some basic consistency along the way
-def growTable(table, directory, filename):
+def grow_table(table, directory, filename):
 
   # This "table" variable is different than the one I created within main(), and will soon replace it
   table[0].append(filename)
@@ -108,10 +131,10 @@ def growTable(table, directory, filename):
 
 
 # This prints the table to the output file
-def printTable(table, outFile):
+def printTable(table, directory, filename):
 
   # Open the output file
-  outHandle = open(outFile, "w")
+  outHandle = open(os.path.join(directory, filename), "w")
 
   # Print the table to the output file
   for i in range(len(table)):
@@ -132,44 +155,38 @@ def main(argv=None):
   if argv == None:
     argv = sys.argv
 
-  # Directory containing input files
-  directory = argv[1]
+  # Get commandline arguments
+  args = get_parsed_args()
 
   # Start a little progress message for the user
-  sys.stdout.write("\nLooking for input files in:\n"+ \
-                   "  "+str(directory)+"\n"+ \
+  sys.stdout.write("\nWorking directory:\n"+ \
+                   "  "+str(args.dir)+"\n"+ \
                    "Importing files:\n")
 
   # Create a temporary dummy variable to catch the initial boundary condition
   table = ''
 
   # Iterate through each file in the specified directory, adding it to a growing table
-  for filename in os.listdir(directory):
+  for filename in os.listdir(args.dir):
 
     # Skip any non-SpectraSuite output files
     if re.match('[A-Z][0-9]{3}\.txt', filename):
 
       # Continue progress message for the user
-      sys.stdout.write("  "+str(os.path.join(directory, filename))+"\n")
+      sys.stdout.write("  "+str(os.path.join(args.dir, filename))+"\n")
 
       # Use the first file to initialize the row labels
       if table == '':
-        table = initializeTable(directory, filename)
+        table = initialize_table(args.dir, filename)
       else:
-        table = growTable(table, directory, filename)
-
-  # Select a file for output
-  if len(argv) > 2:
-    outFilename = argv[2]
-  else:
-    outFilename = os.path.join(str(directory), "combinatized.txt")
+        table = grow_table(table, args.dir, filename)
 
   # Continue progress message for the user
   sys.stdout.write("Writing output to:\n"+ \
-                   "  "+str(outFilename)+"\n")
+                   "  "+str(os.path.join(args.dir, args.out))+"\n")
 
   # Print the table to the output file
-  printTable(table, outFilename)
+  printTable(table, args.dir, args.out)
 
   # Alert user that the program has completed
   sys.stdout.write("Finished!\n\n")
